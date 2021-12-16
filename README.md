@@ -6,7 +6,7 @@ pip install Streamlit
 
 ## Lancer projet Streamlit
 
-streamlit run DAT-901-Strmlit.py
+streamlit run DAT-901-Stmlit.py
 
 
 ## Installer Jupyter notebook
