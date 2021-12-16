@@ -19,9 +19,7 @@ pip install tensorflow
 
 pip install sklearn
 
-pip install seaborn
-
-)
+pip install seaborn)
 
 
 ## Lancer notebook DAT-901
