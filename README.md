@@ -13,6 +13,17 @@ streamlit run DAT-901-Strmlit.py
 
 pip install jupyterlab
 
+(Penser à
+
+pip install tensorflow
+
+pip install sklearn
+
+pip install seaborn
+
+)
+
+
 ## Lancer notebook DAT-901
 
 jupyter notebook
