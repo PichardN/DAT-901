@@ -16,4 +16,5 @@ pip install jupyterlab
 ## Lancer notebook DAT-901
 
 jupyter notebook
+
 Puis naviguer jusqu'au fichier dat-901.ipynb
