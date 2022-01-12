@@ -11,8 +11,8 @@ st.set_page_config(
     layout="wide",
 )
 #DataFrame
-filename = "C:/Users/Nicolas/Documents/EPITECH/DAT-901/KaDo_less.csv"
-path_image = "C:/Users/Nicolas/Documents/EPITECH/DAT-901/cadeau.png"
+filename = "/Users/ammar/DAT-901/DAT-901/KaDo_less.csv"
+path_image = "/Users/ammar//DAT-901/DAT-901/cadeau.png"
 months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
 
 df = pd.read_csv(filename, encoding="utf8")
@@ -32,11 +32,13 @@ def inverse_png(path):
 sidebar = "---"
 
 st.sidebar.title("Navigation")
+#La definition du barre de navigation Les 4 premiers 
 nav = st.sidebar.radio("", ("Home", "Données", "Model de recommendation", "What's next"))
 st.sidebar.markdown(sidebar)
 
 if nav == "Home":
     #TITLE
+    #////////////////// Pour Afficher st. .... //////////////////  
     #st.title('Système de recommendation - KaDo')
     #st.markdown(sidebar)
 
@@ -173,28 +175,41 @@ if nav == "Données":
         months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
         df_month = df["MOIS_VENTE"].value_counts().sort_index()
         df_month.index = months
-        fig = plt.figure(figsize=(10, 4))
+        fig = plt.figure(figsize=(10, 7))
         plt.bar(
             df_month.index,
             height = df_month.values
         )
-        plt.xticks(rotation=45, ha="right")
+        plt.xticks(rotation=45, ha="left")
         plt.xlabel("Mois")
         plt.ylabel("Nombre d'achats")
-        col1.subheader("AAA")
+        col1.subheader("Nombre d'achat par mois")
         col1.pyplot(fig)
 
         #PLOT 2
         df_familles = df["FAMILLE"].value_counts()
-        fig1 = plt.figure(figsize=(10, 4))
-        plt.bar(
-            df_familles.index,
-            height = df_familles.values
-        )
+        #////////////////////////// AFfiher la DataFrame /////////////////////////
+        st.dataframe(df_familles)
+        fig1 = plt.figure(figsize=(10, 4))     # La taille (Le contneur) du graph 
+          
+        labels = df_familles.index
+        sizes = df_familles.values
+        explode = (0, 0.1, 0, 0, 0, 0.1, 0.1)
+        fig1, ax1 = plt.subplots()
+        pp=ax1.pie(sizes, explode=explode,  autopct='%1.1f%%',
+        shadow=True, startangle=90)
+        ax1.axis('equal')
+        plt.legend(pp[0],labels, bbox_to_anchor=(1,0), loc="lower right", 
+                          bbox_transform=plt.gcf().transFigure)
+
+          #plt.bar(        # Creation du graph   ( remplacer par un pie plot)
+          #  df_familles.index,      # Les valeurs a droite du graph (Hygiene , ... )
+          #  height = df_familles.values      # Les Valeurs des graph a droite 
         plt.xticks(rotation=45, ha="right")
-        plt.xlabel("Famille")
-        plt.ylabel("Nombre d'achats")
-        col2.subheader("BBB")
+       # plt.xlabel("Famille")
+       # plt.ylabel("Nombre d'achats")
+        col2.subheader("Pourcentage d'achat par famille")
+        #////////////////////////// Afficher le graph //////////////////////////
         col2.pyplot(fig1)
 
         #PLOT 3 CHOISIR MOIS
