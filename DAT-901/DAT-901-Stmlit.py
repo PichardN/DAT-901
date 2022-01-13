@@ -1,3 +1,5 @@
+from re import A, L
+from typing import List
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -5,17 +7,25 @@ from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+#Import model function
+import model
+
+
 st.set_page_config(
     page_title="KaDo",
     page_icon="chart_with_upwards_trend",
     layout="wide",
 )
-#DataFrame
-filename = "/Users/ammar/DAT-901/DAT-901/KaDo_less.csv"
-path_image = "/Users/ammar//DAT-901/DAT-901/cadeau.png"
-months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
-df = pd.read_csv(filename, encoding="utf8")
+#Const
+filename = "/Users/ammar/DAT-901/DAT-901/KaDo_less.csv"
+path_image = "/Users/ammar/DAT-901/DAT-901/cadeau.png"
+months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
+sidebar = "---"
+
+#Init var
+df = pd.DataFrame()
 
 #Image
 def inverse_png(path):
@@ -27,18 +37,61 @@ def inverse_png(path):
     final_transparent_image = Image.merge('RGBA', (r2,g2,b2,a))
     return final_transparent_image
 
-#inverted_image = ImageOps.invert(image.convert('RGB'))
+# Create an array of every entry the pivot table has
+def wide_to_long(wide, ratings):
+    def _get_ratings(arr, rating):
+        idx = np.where(arr == rating)
+        return np.vstack(
+            (idx[0], idx[1], np.ones(idx[0].size, dtype="int8") * rating)
+        ).T
+    long_arrays = []
+    for r in ratings:
+        long_arrays.append(_get_ratings(wide, r))
+    return np.vstack(long_arrays)
 
-sidebar = "---"
+@st.cache(suppress_st_warning=True)
+def reco_model(df):
+    recommended_list = model.main(df)
+    return recommended_list
 
 st.sidebar.title("Navigation")
-#La definition du barre de navigation Les 4 premiers 
-nav = st.sidebar.radio("", ("Home", "Données", "Model de recommendation", "What's next"))
+placeholder = st.sidebar.empty()
+nav = placeholder.radio("", ("Home", "Contact"))
+
+placeholder_home = st.empty()
+
+
+#------------------------ PAGE HOME--------------------
+
+if nav == "Home" and df.empty:
+    with placeholder_home.container():
+        st.title("Home")
+        st.markdown(sidebar)
+        st.subheader("Voulez-vous utiliser uploader un dataset ou utiliser celui par défaut ?")
+        choice_df = st.radio("", ("Uploader", "Défaut"))
+        if choice_df == "Uploader":
+            file = st.file_uploader("Si vous voulez changer les données sur lesquels l'app se base", type=['csv'])
+            if file:
+                extension = file.name.split('.')[1]
+                if extension.upper() == 'CSV':
+                    df = pd.read_csv(file, encoding="utf8")
+                    st.success("Dataset uploadé")
+                    nav = placeholder.radio("", ("Introduction", "Données", "Recommendation", "What's next", "À propos"))
+                    placeholder_home.empty()
+                else:
+                    st.error("Uploader un fichier csv s'il vous plait")
+        else:
+            df = pd.read_csv(filename, encoding="utf8")
+            st.success("Dataset uploadé")
+            nav = placeholder.radio("", ("Introduction", "Données", "Recommendation", "What's next", "À propos"))
+            placeholder_home.empty()
+
 st.sidebar.markdown(sidebar)
 
-if nav == "Home":
+#------------------------ PAGE INTRODUCTION--------------------
+
+if nav == "Introduction":
     #TITLE
-    #////////////////// Pour Afficher st. .... //////////////////  
     #st.title('Système de recommendation - KaDo')
     #st.markdown(sidebar)
 
@@ -48,10 +101,9 @@ if nav == "Home":
     L'objectif est d'explorer, d'analyser et d'avoir une comprehension profonde du dataset et des enjeux qu'il implique.
     Pour se faire nous utiliserons des outils variés pour transformer et trouver des indicateurs parlant.
     ''')
-    home_col1, home_col2, home_col3= st.columns([3,1,1])
+    home_col1, home_col2, home_col3 = st.columns([3,1,1])
     home_col1.text('''
     Les données sont composées de 8 features :
-
         - TICKET_ID     ID unique de la commande
         - MOIS_VENTE    mois de la vente
         - PRIX_NET      prix net de l'item
@@ -75,10 +127,11 @@ if nav == "Home":
     st.text("Extrait des 5 premières entrées")
     st.dataframe(df.head())
 
+#------------------------ PAGE DONNEES--------------------
 if nav == "Données":
-    sub_nav = st.sidebar.radio("", ("General", "Prix", "Famille", "Clients", "Commandes"))
-    if sub_nav == "General":
-        st.title("GENERAL")
+    sub_nav = st.sidebar.radio("", ("Prix", "Famille", "Clients", "Commandes"))
+
+    #Page Données>Prix
     if sub_nav == "Prix":
         st.title("Prix")
 
@@ -89,7 +142,7 @@ if nav == "Données":
         col4.metric("Moyenne", "%0.2f €" % df.PRIX_NET.mean())
         st.markdown(sidebar)
 
-        st.title("Répartition des prix par filtre")
+        st.title("Répartition des prix par famille, maille ou univers")
         df_famille_prix = df[["FAMILLE", "PRIX_NET", "MAILLE", "UNIVERS"]].sort_values(by=['FAMILLE', 'PRIX_NET'])
 
         check_famille = st.checkbox("Famille")
@@ -106,19 +159,19 @@ if nav == "Données":
         if check_famille:
             if selected is None:
                 selected = "FAMILLE"
-            famille_selected = st.multiselect("Select the FAMILLE you want to compare", df["FAMILLE"].unique())
+            famille_selected = st.multiselect("Selectionner les familles que vous voulez visualiser", df["FAMILLE"].unique())
             data = df_famille_prix.loc[df_famille_prix["FAMILLE"].isin(famille_selected)]
         if check_maille:
             selected = "MAILLE"
             if famille_selected:
                 maille_selected = st.multiselect(
-                    "Select the MAILLE you want to compare",
+                    "Selectionner les mailles que vous voulez visualiser",
                     df["MAILLE"].loc[df["FAMILLE"].isin(famille_selected)].unique()
                 )
                 data = df_famille_prix.loc[df_famille_prix["FAMILLE"].isin(famille_selected) & df_famille_prix["MAILLE"].isin(maille_selected)]
             else:
                 maille_selected = st.multiselect(
-                    "Select the MAILLE you want to compare",
+                    "Selectionner les mailles que vous voulez visualiser",
                     df["MAILLE"].unique()
                 )
                 data = df_famille_prix.loc[df_famille_prix["MAILLE"].isin(maille_selected)]
@@ -127,90 +180,70 @@ if nav == "Données":
             if famille_selected:
                 if maille_selected:
                     univers_selected = st.multiselect(
-                        "Select the UNIVERS you want to compare",
+                        "Selectionner les univers que vous voulez visualiser",
                         df["UNIVERS"].loc[df["FAMILLE"].isin(famille_selected) & df["MAILLE"].isin(maille_selected)].unique()
                     )
                     data = df_famille_prix.loc[df_famille_prix["FAMILLE"].isin(famille_selected) & df_famille_prix["MAILLE"].isin(maille_selected) & df_famille_prix["UNIVERS"].isin(univers_selected)]
                 else:
                     univers_selected = st.multiselect(
-                        "Select the UNIVERS you want to compare",
+                        "Selectionner les univers que vous voulez visualiser",
                         df["UNIVERS"].loc[df["FAMILLE"].isin(famille_selected)].unique()
                     )
                     data = df_famille_prix.loc[df_famille_prix["FAMILLE"].isin(famille_selected) & df_famille_prix["UNIVERS"].isin(univers_selected)]
             else:
                 if maille_selected:
                     univers_selected = st.multiselect(
-                        "Select the UNIVERS you want to compare",
+                        "Selectionner les univers que vous voulez visualiser",
                         df["UNIVERS"].loc[df["MAILLE"].isin(maille_selected)].unique()
                     )
                     data = df_famille_prix.loc[df_famille_prix["MAILLE"].isin(maille_selected) & df_famille_prix["UNIVERS"].isin(univers_selected)]
                 else:
                     univers_selected = st.multiselect(
-                        "Select the UNIVERS you want to compare",
+                        "Selectionner les univers que vous voulez visualiser",
                         df["UNIVERS"].unique()
                     )
                     data = df_famille_prix.loc[df_famille_prix["UNIVERS"].isin(univers_selected)]
 
-        #selected = np.concatenate((famille_selected, maille_selected, univers_selected))
-
-        #selectedaa = st.radio("Choisir catégorie", {"FAMILLE", "MAILLE", "UNIVERS"})
-
-        #type_selected = st.multiselect("Select the FAMILLE you want to compare", df[selected].unique(),df[selected].unique()[0] )
         if famille_selected or maille_selected or univers_selected:
-            fig_fam = sns.displot(
+            fig_fam = plt.clf()
+            ax = sns.displot(
                 data = data,
                 col = selected,
                 x = "PRIX_NET",
                 common_norm = False,
-                kde=False, fill=True
+                kde=True, fill=True
             )
+            plt.xlim(min(data.PRIX_NET), max(data.PRIX_NET))
+            ax.set(xlabel='Prix (€)', ylabel='Quantité')
             st.pyplot(fig_fam)
 
-
+    #Page Données>Famille
     if sub_nav == "Famille":
-        st.title("Repartition")
-        col1, col2 =  st.columns(2)
+        st.title("Famille")
+        st.subheader("Répartition des familles de produits vendus sur l'année")
 
-        #PLOT 1
-        months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
-        df_month = df["MOIS_VENTE"].value_counts().sort_index()
-        df_month.index = months
-        fig = plt.figure(figsize=(10, 7))
-        plt.bar(
-            df_month.index,
-            height = df_month.values
-        )
-        plt.xticks(rotation=45, ha="left")
-        plt.xlabel("Mois")
-        plt.ylabel("Nombre d'achats")
-        col1.subheader("Nombre d'achat par mois")
-        col1.pyplot(fig)
+        col1, col2, col3 =  st.columns(3)
 
-        #PLOT 2
+        #Column 1
         df_familles = df["FAMILLE"].value_counts()
-        #////////////////////////// AFfiher la DataFrame /////////////////////////
-        st.dataframe(df_familles)
-        fig1 = plt.figure(figsize=(10, 4))     # La taille (Le contneur) du graph 
-          
-        labels = df_familles.index
-        sizes = df_familles.values
-        explode = (0, 0.1, 0, 0, 0, 0.1, 0.1)
-        fig1, ax1 = plt.subplots()
-        pp=ax1.pie(sizes, explode=explode,  autopct='%1.1f%%',
-        shadow=True, startangle=90)
-        ax1.axis('equal')
-        plt.legend(pp[0],labels, bbox_to_anchor=(1,0), loc="lower right", 
-                          bbox_transform=plt.gcf().transFigure)
-
-          #plt.bar(        # Creation du graph   ( remplacer par un pie plot)
-          #  df_familles.index,      # Les valeurs a droite du graph (Hygiene , ... )
-          #  height = df_familles.values      # Les Valeurs des graph a droite 
+        fig1 = plt.figure(figsize=(10, 10))
+        plt.pie(
+            df_familles,
+            labels = df_familles.index,
+            autopct='%1.1f%%',
+            explode=[0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+        )
         plt.xticks(rotation=45, ha="right")
-       # plt.xlabel("Famille")
-       # plt.ylabel("Nombre d'achats")
-        col2.subheader("Pourcentage d'achat par famille")
-        #////////////////////////// Afficher le graph //////////////////////////
-        col2.pyplot(fig1)
+        #Display
+        col1.pyplot(fig1)
+
+        #Column 2 / 3
+        col2.metric("Nombre de produits vendus sur l'année", f'{df.shape[0]:,}')
+        for fam in range(len(df_familles)):
+            if fam < len(df_familles)/2 - 1:
+                col2.metric(df_familles.index[fam], f'{df_familles[fam]:,} produits')
+            else:
+                col3.metric(df_familles.index[fam], f'{df_familles[fam]:,} produits')
 
         #PLOT 3 CHOISIR MOIS
         input_month = st.selectbox(
@@ -254,28 +287,133 @@ if nav == "Données":
             st.subheader(input_famille.title())
             st.pyplot(fig3)
 
+    #Page Données>Clients
     if sub_nav == "Clients":
         client_id = st.text_input("Entrer identifiant client")
         if(st.button('Confirmer')):
             df_client = df.loc[df["CLI_ID"] == int(client_id.title())]
             st.dataframe(df_client)
 
-
+    #Page Données>Commandes
     if sub_nav == "Commandes":
-        st.title("Metrics")
-        col1, col2, col3, col4 = st.columns(4)
-        #TODO create groupby for command and calculte average price of command et repartition sur l'année
-        col1.metric("Max", "%0.2f €" % max(df.PRIX_NET))
-        col2.metric("Min", "%0.2f €" % min(df.PRIX_NET))
-        col3.metric("Median", "%0.2f €" % df.PRIX_NET.median())
-        col4.metric("Moyenne", "%0.2f €" % df.PRIX_NET.mean())
-    st.sidebar.title("Data selection")
+        st.title("Commandes")
 
-if nav == "Recommender model":
-    st.title("MODEL")
+        col1, col2 = st.columns(2)
 
+        #COL 1 GRAPH
+        df_command_month = df.groupby("MOIS_VENTE").agg({"TICKET_ID": "nunique"}).reset_index()
+        df_command_month = df_command_month.drop(["MOIS_VENTE"], axis=1)
+        df_command_month.index = months
+        fig = plt.figure(figsize=(10, 4))
+        plt.bar(
+            df_command_month.index,
+            height = df_command_month.TICKET_ID
+        )
+        plt.xticks(rotation=45, ha="right")
+        plt.xlabel("Mois")
+        plt.ylabel("Nombre d'achats")
+        #Display
+        col1.subheader("Répartition du nombre de commandes sur l'année")
+        col1.pyplot(fig)
+
+        #COL2 GRAPH
+        df_mean_command = df.groupby(["CLI_ID", "TICKET_ID"], as_index=False)["PRIX_NET"].sum().groupby("CLI_ID")["PRIX_NET"].mean()
+        df_num_command = df.groupby(["CLI_ID"])["TICKET_ID"].count()
+        df_command = pd.concat([df_mean_command, df_num_command], axis = 1)
+        df_command = df_command.rename(columns = {'PRIX_NET': 'MEAN', 'TICKET_ID': 'COUNT'})
+        fig_com = plt.clf()
+        ax = sns.regplot(x = df_command["MEAN"], y =  df_command["COUNT"], fit_reg = False)
+        ax.set(
+            xlabel = "Prix moyen par commande (en €)",
+            ylabel = "Nombre de commandes par client"
+        )
+        col2.subheader("Répartition du nombre de commandes sur l'année")
+        col2.pyplot(fig_com)
+
+
+        command_id = st.text_input("Entrer identifiant commande")
+        if(st.button('Confirmer')):
+            df_command = df.loc[df["TICKET_ID"] == int(command_id.title())]
+            st.dataframe(df_command)
+
+        st.sidebar.title("Data selection")
+
+
+#------------------------ PAGE RECOMMENDER MODEL--------------------
+if nav == "Recommendation":
+    st.title("Système de recommendation")
+    st.subheader("Basé sur les comportements des autres clients")
+    client_id = st.text_input("Entrer identifiant client")
+    st.text("Vous pouvez choisir quels critère mettre en avant dans le choix de recommendation")
+    data_choice = st.radio("Choississez", ("Aucun", "Prix", "Quantité"))
+    if data_choice == "Prix":
+        df_rec = df
+        #TODO loc df values where cat prix du client
+    elif data_choice == "Quantité":
+        df_rec = df
+        #TODO loc df values where cat qté du client
+    else:
+        df_rec = df
+    recommended_list = reco_model(df_rec)
+    if st.button(f'Obtenir la recommendation pour le client'):
+        item_recommended = recommended_list.loc[recommended_list.index == int(client_id.title())]
+        st.subheader(f"""Pour le client {client_id} l'item recommendé est :
+            {item_recommended.values[0]}""")
+
+#------------------------ PAGE WHAT'S NEXT--------------------
 if nav == "What's next":
-    st.title("WHAT'S NEXT")
+    st.title("What's next")
+    st.write("NLP recognition")
+    st.write("CI with AWS Bucket and ")
+    st.write("Un dashboard plus complet et plus modulable")
+
+#------------------------ PAGE CONTACT--------------------
+if nav == "À propos":
+    st.title("À propos")
+    st.subheader("L'équipe")
+    col1, col2, col3 = st.columns(3)
+
+    image = Image.open("/Users/ammar/DAT-901/DAT-901/image.jpg")
+    col1.image(image)
+    col1.markdown("<h2 style='text-align: center'>BOUACEM Yannis</h1>", unsafe_allow_html=True)
+
+    image1 = Image.open("/Users/ammar/DAT-901/DAT-901/image1.jpg")
+    col2.image(image1)
+    col2.markdown("<h2 style='text-align: center'>AMMAR Sana</h1>", unsafe_allow_html=True)
+
+    image2 = Image.open("/Users/ammar/DAT-901/DAT-901/image2.jpg")
+    col3.image(image2)
+    col3.markdown("<h2 style='text-align: center'>PICHARD Nicolas</h1>", unsafe_allow_html=True)
+
+    st.markdown(sidebar)
+
+    st.subheader("Les librairies")
+    col_lib1, col_lib2, col_lib3 = st.columns(3)
+    libs = [
+        "streamlit",
+        "seaborn",
+        "pandas",
+        "numpy",
+        "keras",
+        "tensorflow",
+        "scikit",
+        "matplotlib"
+    ]
+    path = "/Users/ammar/DAT-901/DAT-901/"
+    for lib in range(len(libs)):
+        if lib < len(libs)*2/3:
+            if lib < len(libs)/3:
+                image = Image.open(path + libs[lib] + ".png")
+                image.thumbnail((150, 250),Image.ANTIALIAS)
+                col_lib1.image(image)
+            else:
+                image = Image.open(path + libs[lib] + ".png")
+                image.thumbnail((150, 250),Image.ANTIALIAS)
+                col_lib2.image(image)
+        else:
+            image = Image.open(path + libs[lib] + ".png")
+            image.thumbnail((150, 250),Image.ANTIALIAS)
+            col_lib3.image(image)
 
 
 st.sidebar.image(inverse_png(path_image))
