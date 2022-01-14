@@ -19,8 +19,8 @@ st.set_page_config(
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
 #Const
-filename = "C:/Users/Nicolas/Documents/EPITECH/DAT-901/KaDo_less.csv"
-path_image = "C:/Users/Nicolas/Documents/EPITECH/DAT-901/cadeau.png"
+filename = "C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/KaDo_less.csv"
+path_image = "C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/cadeau.png"
 months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
 sidebar = "---"
 
@@ -347,16 +347,9 @@ if nav == "Recommendation":
     client_id = st.text_input("Entrer identifiant client")
     st.text("Vous pouvez choisir quels critère mettre en avant dans le choix de recommendation")
     data_choice = st.radio("Choississez", ("Aucun", "Prix", "Quantité"))
-    if data_choice == "Prix":
-        df_rec = df
-        #TODO loc df values where cat prix du client
-    elif data_choice == "Quantité":
-        df_rec = df
-        #TODO loc df values where cat qté du client
-    else:
-        df_rec = df
-    recommended_list = reco_model(df_rec)
-    if st.button(f'Obtenir la recommendation pour le client'):
+    if st.button(f'Obtenir la recommendation pour le client') and client_id:
+        df_rec = model.choose_data(data_choice, df, client_id)
+        recommended_list = reco_model(df_rec)
         item_recommended = recommended_list.loc[recommended_list.index == int(client_id.title())]
         st.subheader(f"""Pour le client {client_id} l'item recommendé est :
             {item_recommended.values[0]}""")
@@ -374,15 +367,15 @@ if nav == "À propos":
     st.subheader("L'équipe")
     col1, col2, col3 = st.columns(3)
 
-    image = Image.open("C:/Users/Nicolas/Documents/EPITECH/DAT-901/image.jpg")
+    image = Image.open("C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/image.jpg")
     col1.image(image)
     col1.markdown("<h2 style='text-align: center'>BOUACEM Yannis</h1>", unsafe_allow_html=True)
 
-    image1 = Image.open("C:/Users/Nicolas/Documents/EPITECH/DAT-901/image1.jpg")
+    image1 = Image.open("C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/image1.jpg")
     col2.image(image1)
     col2.markdown("<h2 style='text-align: center'>AMMAR Sana</h1>", unsafe_allow_html=True)
 
-    image2 = Image.open("C:/Users/Nicolas/Documents/EPITECH/DAT-901/image2.jpg")
+    image2 = Image.open("C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/image2.jpg")
     col3.image(image2)
     col3.markdown("<h2 style='text-align: center'>PICHARD Nicolas</h1>", unsafe_allow_html=True)
 
@@ -400,7 +393,7 @@ if nav == "À propos":
         "scikit",
         "matplotlib"
     ]
-    path = "C:/Users/Nicolas/Documents/EPITECH/DAT-901/"
+    path = "C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/"
     for lib in range(len(libs)):
         if lib < len(libs)*2/3:
             if lib < len(libs)/3:

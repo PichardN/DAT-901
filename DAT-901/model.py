@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow.keras as keras
 import tensorflow as tf
 from typing import List
+from sklearn.cluster import KMeans
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -153,6 +154,24 @@ def clean_data(df_clean):
     cat_cols = ["FAMILLE", "UNIVERS", "MAILLE"]
     df_clean[cat_cols] = ordinal_encoder.fit_transform(df_clean[cat_cols])
     return df_clean[features]
+
+def prix_cluster(df, client_id):
+    df_mean_command = df.groupby(["CLI_ID", "TICKET_ID"], as_index=False)["PRIX_NET"].sum().groupby("CLI_ID")["PRIX_NET"].mean()
+    df_num_command = df.groupby(["CLI_ID"])["TICKET_ID"].count()
+    df_command = pd.concat([df_mean_command, df_num_command], axis = 1)
+    X = df_command
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(X)
+    df_command["CAT"] = kmeans.labels_
+    return df_command.loc[(df_command.CAT == df_command.loc[int(client_id)].CAT)]
+
+def choose_data(type_data, df, client_id):
+    if type_data == "Prix":
+        df_prix = prix_cluster(df, client_id)
+        return df.loc[(df.CLI_ID.isin(df_prix.index))]
+    elif type_data == "Quantité":
+        return df
+    else:
+        return df
 
 def main(df):
     df_train = clean_data(df)
