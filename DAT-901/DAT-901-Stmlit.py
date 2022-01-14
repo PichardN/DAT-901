@@ -21,6 +21,7 @@ st.set_option('deprecation.showPyplotGlobalUse', False)
 #Const
 filename = "C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/KaDo_less.csv"
 path_image = "C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/cadeau.png"
+
 months = ["January", "February", "March", "April", "May", "June", "Jully", "August", "September", "October", "November", "December"]
 sidebar = "---"
 
@@ -104,7 +105,6 @@ if nav == "Introduction":
     home_col1, home_col2, home_col3 = st.columns([3,1,1])
     home_col1.text('''
     Les données sont composées de 8 features :
-
         - TICKET_ID     ID unique de la commande
         - MOIS_VENTE    mois de la vente
         - PRIX_NET      prix net de l'item
@@ -376,6 +376,7 @@ if nav == "À propos":
     col2.markdown("<h2 style='text-align: center'>AMMAR Sana</h1>", unsafe_allow_html=True)
 
     image2 = Image.open("C:/Users/Nicolas/Documents/GitHub/DAT-901/DAT-901/image2.jpg")
+
     col3.image(image2)
     col3.markdown("<h2 style='text-align: center'>PICHARD Nicolas</h1>", unsafe_allow_html=True)
 
@@ -411,5 +412,3 @@ if nav == "À propos":
 
 
 st.sidebar.image(inverse_png(path_image))
-
-
