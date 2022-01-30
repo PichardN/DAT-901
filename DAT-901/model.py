@@ -168,8 +168,6 @@ def choose_data(type_data, df, client_id):
     if type_data == "Prix":
         df_prix = prix_cluster(df, client_id)
         return df.loc[(df.CLI_ID.isin(df_prix.index))]
-    elif type_data == "Quantité":
-        return df
     else:
         return df
 
@@ -183,7 +181,7 @@ def main(df):
     weight_pivot = pivot_weight_df.to_numpy()
     long = wide_to_long(weight_pivot, np.unique(weight_pivot))
     df_weight = pd.DataFrame(long, columns=["CLI_ID", "LIBELLE", "interaction"])
-    #We try to reduce the interaction weight
+    #We try to reduce the interaction weight NOT USED HERE
     df_weight_red = pd.DataFrame(df_weight, columns=["CLI_ID", "LIBELLE", "interaction"])
     df_weight_red["interaction"] = np.sqrt(df_weight["interaction"])
 
@@ -203,7 +201,7 @@ def main(df):
         ],
     )
     ncf_model._name = "neural_collaborative_filtering"
-    ds_train, ds_val = make_tf_dataset(df_weight_red, ["interaction"])
+    ds_train, ds_val = make_tf_dataset(df_weight, ["interaction"])
     train_hist = ncf_model.fit(
         ds_train,
         validation_data=ds_val,
@@ -220,6 +218,4 @@ def main(df):
     table_test = pd.pivot_table(data = df_test_clean, index = "CLI_ID", columns = "LIBELLE", values = "ncf_predictions")
     table_test.columns = pivot_weight_df.columns
     table_test.index = pivot_weight_df.index
-    recommended_items = table_test.idxmax(axis="columns")
-    st.dataframe(recommended_items)
-    return recommended_items
+    return table_test
